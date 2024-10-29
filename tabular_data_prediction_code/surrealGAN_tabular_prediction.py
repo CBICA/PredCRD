@@ -24,7 +24,7 @@ def get_surreal_GAN_loader(X, y, batch_size = 32, shuffle = True):
     
     return loader
 
-### TabularTransformer
+### TabularTransformer - knowledge distillation approach
 class TabularTransformer(nn.Module):
     def __init__(self, input_dim, d_model, nhead, num_layers, output_dim):
         super().__init__()
