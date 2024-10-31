@@ -13,7 +13,7 @@ with open("requirements.txt") as f:
 setup(
     name="PredCRD",
     version="0.0.1",
-    description="PredCRD - .",
+    description="PredCRD - Predict Continuous Representation of Disease.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Kyunglok Baik, Di Wu",
