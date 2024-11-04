@@ -99,17 +99,17 @@ def run_tabular_transformer_pipeline(model_dic_path='../roi_model',
                                                                                 model_dic_path = model_dic_path , 
                                                                                 folder = i,
                                                                                 device = device)
-
+        
+        np.save(f'{model_dic_path}/transformer_folder_{i}_train_loss.npy', average_train_loss)
+        np.save(f'{model_dic_path}/transformer_folder_{i}_val_loss.npy', average_val_loss)
+        
         ### testing 
         test_result, output_result = infer_tabular_transformer( model = model,
                                                                 test_loader = test_loader, 
                                                                 model_dic_path = model_dic_path, 
                                                                 folder = i,
                                                                 device = device)
-
-        np.save(f'{model_dic_path}/transformer_folder_{i}_train_loss.npy', average_train_loss)
-        np.save(f'{model_dic_path}/transformer_folder_{i}_val_loss.npy', average_val_loss)
-            
+  
         test_df[['R1','R2','R3','R4','R5']] = output_result
         test_df[['MRID','r1','r2','r3','r4','r5','R1','R2','R3','R4','R5']].to_csv(f'{model_dic_path}/transformer_Regressor_folder_{i}.csv', index = False)
         

@@ -5,3 +5,4 @@
 *.npy
 *.pth
 roi_model/
+notebook/
