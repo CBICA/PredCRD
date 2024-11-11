@@ -6,3 +6,4 @@
 *.pth
 roi_model/
 notebook/
+test/

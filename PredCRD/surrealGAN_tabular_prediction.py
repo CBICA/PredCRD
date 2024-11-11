@@ -1,4 +1,4 @@
-#import os 
+import os 
 import numpy as np 
 import pandas as pd
 
@@ -7,11 +7,11 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
-#from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
+from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
 from sklearn.model_selection import KFold#, StratifiedKFold
-#from sklearn.metrics import balanced_accuracy_score, f1_score
+from sklearn.metrics import balanced_accuracy_score, f1_score
 from sklearn.preprocessing import StandardScaler
-#import time
+import time
 
 
 ### data loader 
@@ -168,7 +168,7 @@ if __name__ == "__main__":
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f'Current Device is {device}')
     model_dic_path = '../roi_model'
-    
+    test_out_path='../test'
     ### read data
     #     - "train_test": test -> all istaging , train -> training for surrealGANs
     #     - feel free to change to "train" for small data 
@@ -245,7 +245,7 @@ if __name__ == "__main__":
         np.save(f'{model_dic_path}/transformer_folder_{i}_val_loss.npy', average_val_loss)
             
         test_df[['R1','R2','R3','R4','R5']] = output_result
-        test_df[['MRID','r1','r2','r3','r4','r5','R1','R2','R3','R4','R5']].to_csv(f'{model_dic_path}/transformer_Regressor_folder_{i}.csv', index = False)
+        test_df[['MRID','r1','r2','r3','r4','r5','R1','R2','R3','R4','R5']].to_csv(f'{test_out_path}/transformer_Regressor_folder_{i}.csv', index = False)
         
         transformer_result.append(test_result)
 
