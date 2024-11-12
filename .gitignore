@@ -2,8 +2,8 @@
 *.xlsx
 *.ipynb
 *.log
-*.npy
-*.pth
+original_req.txt
 roi_model/
 notebook/
 test/
+log/
