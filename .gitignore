@@ -7,3 +7,4 @@ roi_model/
 notebook/
 test/
 log/
+submit-transformer-test.sh
