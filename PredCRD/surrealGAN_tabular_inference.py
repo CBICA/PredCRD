@@ -99,7 +99,7 @@ def run_tabular_transformer_pipeline(model_dic_path='../roi_model',
 
         
         ### Training 
-        model, average_train_loss, average_val_loss = train_tabular_transformer(num_epochs = 10 , 
+        model, average_train_loss, average_val_loss = train_tabular_transformer(num_epochs = 1000 , 
                                                                                 model = model, 
                                                                                 optimizer = optimizer, 
                                                                                 train_loader = train_loader, 

@@ -3,8 +3,9 @@
 *.ipynb
 *.log
 original_req.txt
+submit-transformer-test.sh
 roi_model/
 notebook/
 test/
 log/
-submit-transformer-test.sh
+PredCRD.egg-info/
