@@ -1,0 +1,14 @@
+README.md
+setup.cfg
+setup.py
+PredCRD/__init__.py
+PredCRD/__main__.py
+PredCRD/surrealGAN_tabular_inference.py
+PredCRD/surrealgan_prediction.py
+PredCRD/utils.py
+PredCRD.egg-info/PKG-INFO
+PredCRD.egg-info/SOURCES.txt
+PredCRD.egg-info/dependency_links.txt
+PredCRD.egg-info/entry_points.txt
+PredCRD.egg-info/requires.txt
+PredCRD.egg-info/top_level.txt

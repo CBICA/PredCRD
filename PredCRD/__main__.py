@@ -3,25 +3,40 @@ import argparse
 
 import numpy as np 
 import pandas as pd
-import pickle
+from joblib import dump, load
 
 import torch 
-# import torch.nn as nn
-# import torch.optim as optim
+import torch.nn as nn
+import torch.optim as optim
 
-# from sklearn.model_selection import train_test_split
-# from sklearn.model_selection import KFold
-# from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler
 
-from .utils import get_surreal_GAN_loader, infer_tabular_transformer
-from .utils import TabularTransformer
+from .utils_surrealgan_prediction import get_surreal_GAN_loader_inference, inference
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 warnings.simplefilter(action="ignore", category=UserWarning)
+warnings.simplefilter(action="ignore", category=SyntaxWarning)
 
 VERSION = '0.0.1'
 
-def main():
+### TabularTransformer - built for knowledge distillation approach
+class TabularTransformer(nn.Module):
+    def __init__(self, input_dim, d_model, nhead, num_layers, output_dim):
+        super().__init__()
+        
+        self.embedding = nn.Linear(input_dim, d_model)
+        transformer_layer = nn.TransformerEncoderLayer(d_model = d_model, nhead = nhead)
+        self.transformer_encoder = nn.TransformerEncoder(transformer_layer, num_layers = num_layers)
+        self.fc = nn.Linear(d_model, output_dim)
+        
+    def forward(self, x):
+        x = self.embedding(x)
+        output = self.transformer_encoder(x)
+        output = self.fc(output)
+        
+        return output 
+
+def main() -> None:
     prog = "PredCRD"
     parser = argparse.ArgumentParser(
         prog=prog,
@@ -38,40 +53,35 @@ def main():
             [-o, --out_dir]  The filepath of the output CSV file
         Optional arguments:
             [-h, --help]    Show this help message and exit.
-            [-V, --version] Show program's version number and exit.
         EXAMPLE USAGE:
             PredCRD  -i           /path/to/input.csv
                      -o           /path/to/output.csv
                      -d           *Optional cuda/cpu
                      -m           *Optional /path/to/model.pth
-                     -s           *Optional /path/to/scalar.pkl
+                     -s           *Optional /path/to/scalar.bin
 
-        """.format(
-            VERSION=VERSION
-        ),
+        """.format(VERSION=VERSION),
+        add_help=False
     )
     # Required Arguments
     parser.add_argument(
         "-i",
-        "--in_file",
         type=str,
         required=True,
         help="[REQUIRED] input DLMUSE ROI file (.csv).",
     )
     parser.add_argument(
         "-o",
-        "--out_file",
         type=str,
         required=True,
         help="[REQUIRED] output CSV file (.csv)",
     )
     parser.add_argument(
         "-d",
-        "--device",
         type=str,
         required=False,
         default="cuda",
-        help="[Optional] Device type. Choose between cuda and cpu."
+        help="[Optional] Device type. Choose between cuda and cpu.",
     )
     parser.add_argument(
         "-m",
@@ -84,8 +94,15 @@ def main():
         "-s",
         type=str,
         required=False,
-        default="../model/scalar.pkl",
-        help="[Optional] StandardScalar weight path. model/scalar.pkl by default.",
+        default="../model/scaler_0.bin",
+        help="[Optional] StandardScalar weight path. model/scaler_0.bin by default.",
+    )
+    parser.add_argument(
+        "-mt",
+        type=str,
+        required=False,
+        default="../model/transformer_folder_0_icv_mean_train.npy",
+        help="[Optional] Mean training ICV volume (.npy)"
     )
 
     args = parser.parse_args()
@@ -94,29 +111,40 @@ def main():
     if not args.i or not args.o:
         parser.error("The following arguments are required: -i, -o")
 
+    print("Input: %s" % args.i)
+    print("output: %s" % args.o)
+
     # Set Device
     device = 'cuda' if args.d=="cuda" and torch.cuda.is_available() else 'cpu'
     print(f'Current Device is {device}')
 
-    # load the model architecture
-    model = TabularTransformer(148, 32, 4, 4, 5).to(device)
-    model_dic_path='../roi_model'
+    ## Inference
+    print("Initiating the inference.")
 
-    # Load StandardScalar weights
-    with open('model/scaler.pkl','rb') as f:
-        scaler = pickle.load(f)
+    test_df = pd.read_csv(args.i)
+    icv_mean_train = np.load(args.mt)[0]
 
-    # Test data
-    X_test  = scaler.transform(test_df_X)
-    y_test = np.array(test_df[['r1','r2','r3','r4','r5']].reset_index(drop = True))
+    col_name = test_df.filter(regex='^MUSE_(?:20[0-7]|1\d\d|[1-9]\d|[4-9])$').columns
+    test_df[col_name] = test_df.filter(regex='^MUSE_(?:20[0-7]|1\d\d|[1-9]\d|[4-9])$').div(test_df['DLICV'], axis = 0).mul(icv_mean_train, axis = 0)
     
-    test_loader  = get_surreal_GAN_loader(X_test , y_test,  batch_size = 32, shuffle = False)
+    # test_df_X  = test_df.drop(columns =  ['MRID','Study','train_test','r1','r2','r3','r4','r5']).reset_index(drop = True)
 
-    test_result, output_result = infer_tabular_transformer(model = model,
-                                                           model_dic_path = model_dic_path, 
-                                                           test_loader = test_loader,
-                                                           folder = 0,
-                                                           device = device)
+    ##### Use the saved StandardScalar
+    sc=load(args.s) # Load the Scaler
+    X_inference  = sc.transform(test_df[col_name])
+    
+    ### load model from checkpoint
+    model_loaded = TabularTransformer(148, 32, 4, 4, 5).to(device)
+
+    inference_loader  = get_surreal_GAN_loader_inference(X_inference, batch_size = 32)
+
+    inference_result = inference(model = model_loaded,
+                                 test_loader = inference_loader,
+                                 model_dic_path = args.m,
+                                 device = device)
+    
+    test_df[['R1','R2','R3','R4','R5']] = inference_result
+    test_df[['MRID','R1','R2','R3','R4','R5']].to_csv(args.o, index = False)
 
 if __name__ == "__main__":
     main()

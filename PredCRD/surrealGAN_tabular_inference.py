@@ -1,6 +1,6 @@
 import numpy as np 
 import pandas as pd
-import pickle
+import joblib
 
 import torch 
 import torch.nn as nn
@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 
-from utils import get_surreal_GAN_loader, train_tabular_transformer, infer_tabular_transformer
+from utils import get_surreal_GAN_loader, train_tabular_transformer, test_tabular_transformer, get_surreal_GAN_loader_inference, inference
 
 ### TabularTransformer - built for knowledge distillation approach
 class TabularTransformer(nn.Module):
@@ -63,10 +63,13 @@ def run_tabular_transformer_pipeline(model_dic_path='../roi_model',
         ### ICV correction: divied by ICV, multiply by "MEAN of TRAIN ICV"
         col_name = train_df.filter(regex='^MUSE_(?:20[0-7]|1\d\d|[1-9]\d|[4-9])$').columns
         icv_mean_train = np.mean(train_df['DLICV'])
+        print("ICV Mean for training:", icv_mean_train)
+        np.save(f'{model_dic_path}/transformer_folder_{i}_icv_mean_train.npy', np.array([icv_mean_train]))
 
         train_df[col_name] = train_df.filter(regex='^MUSE_(?:20[0-7]|1\d\d|[1-9]\d|[4-9])$').div(train_df['DLICV'], axis = 0).mul(icv_mean_train, axis = 0)
         val_df[col_name]   = val_df.filter(regex='^MUSE_(?:20[0-7]|1\d\d|[1-9]\d|[4-9])$').div(val_df['DLICV'], axis = 0).mul(icv_mean_train, axis = 0)
         test_df[col_name]  = test_df.filter(regex='^MUSE_(?:20[0-7]|1\d\d|[1-9]\d|[4-9])$').div(test_df['DLICV'], axis = 0).mul(icv_mean_train, axis = 0)
+        inference_df = test_df
 
         ### Standarize data 
         train_df_X = train_df.drop(columns = ['MRID','Study','train_test','r1','r2','r3','r4','r5']).reset_index(drop = True)
@@ -76,10 +79,10 @@ def run_tabular_transformer_pipeline(model_dic_path='../roi_model',
         y_train = np.array(train_df[['r1','r2','r3','r4','r5']].reset_index(drop = True))
         y_val   = np.array(val_df[['r1','r2','r3','r4','r5']].reset_index(drop = True))
         y_test = np.array(test_df[['r1','r2','r3','r4','r5']].reset_index(drop = True))
-
+        
+        #### Fit & Save the StandardScaler
         scaler = StandardScaler().fit(train_df_X)
-        with open(f'{model_dic_path}/scaler.pkl','wb') as f:
-            pickle.dump(scaler, f)
+        joblib.dump(scaler, f'{model_dic_path}/scaler_{i}.joblib') # Save the Scaler
 
         X_train = scaler.transform(train_df_X)
         X_val   = scaler.transform(val_df_X)
@@ -94,8 +97,9 @@ def run_tabular_transformer_pipeline(model_dic_path='../roi_model',
         model = TabularTransformer(148, 32, 4, 4, 5).to(device)
         optimizer = optim.Adam(model.parameters(), lr = 3e-4, weight_decay = 5e-7)
 
-        ### training 
-        model, average_train_loss, average_val_loss = train_tabular_transformer(num_epochs = 100 , 
+        
+        ### Training 
+        model, average_train_loss, average_val_loss = train_tabular_transformer(num_epochs = 10 , 
                                                                                 model = model, 
                                                                                 optimizer = optimizer, 
                                                                                 train_loader = train_loader, 
@@ -107,77 +111,43 @@ def run_tabular_transformer_pipeline(model_dic_path='../roi_model',
         np.save(f'{model_dic_path}/transformer_folder_{i}_train_loss.npy', average_train_loss)
         np.save(f'{model_dic_path}/transformer_folder_{i}_val_loss.npy', average_val_loss)
         
-        ### testing 
-        test_result, output_result = infer_tabular_transformer( model = model,
-                                                                test_loader = test_loader, 
-                                                                model_dic_path = model_dic_path, 
-                                                                folder = i,
-                                                                device = device)
+        
+        ### Testing 
+        test_result, output_result = test_tabular_transformer(model = model,
+                                                              test_loader = test_loader, 
+                                                              model_dic_path = model_dic_path, 
+                                                              folder = i,
+                                                              device = device)
   
         test_df[['R1','R2','R3','R4','R5']] = output_result
-        test_df[['MRID','r1','r2','r3','r4','r5','R1','R2','R3','R4','R5']].to_csv(f'{model_dic_path}/transformer_Regressor_folder_{i}.csv', index = False)
+        test_df[['MRID','r1','r2','r3','r4','r5','R1','R2','R3','R4','R5']].to_csv(f'{model_dic_path}/transformer_Regressor_test_{i}.csv', index = False)
         
         transformer_result.append(test_result)
+
+        
+        ## Inference
+        print("Initiating the inference for fold #%d" % i)
+
+        ##### Use the saved StandardScalar
+        sc=joblib.load(f'{model_dic_path}/scaler_{i}.joblib') # Load the Scaler
+        X_inference  = sc.transform(test_df_X)
+        
+        ### load model from checkpoint
+        model_loaded = TabularTransformer(148, 32, 4, 4, 5).to(device)
+
+        inference_loader  = get_surreal_GAN_loader_inference(X_inference, batch_size = 32)
+
+        inference_result = inference(model = model_loaded,
+                                     test_loader = inference_loader,
+                                     model_dic_path = model_dic_path, 
+                                     folder = i,
+                                     device = device)
+        
+        inference_df[['R1','R2','R3','R4','R5']] = inference_result
+        inference_df[['MRID','R1','R2','R3','R4','R5']].to_csv(f'{model_dic_path}/transformer_Regressor_inference_{i}.csv', index = False)
     
     return transformer_result
-# ###
-# def test_tabular_transformer(input_path='../tabular_data/SurrealGAN-ALL.csv',
-#                              output_path='../test_results',
-#                              model_dic_path='../roi_model'):
-    
-    
-#     ### read data
-#     data = pd.read_csv(input_path)
-#     #     - "train_test": test -> all istaging , train -> training for surrealGANs
-#     #     - feel free to change to "train" for small data 
-#     all_istaging_data = data[data['train_test'] == 'test']
-#     all_istaging_data['Sex'] = all_istaging_data['Sex'].apply(lambda x: 0 if x == 'M' else 1)
-    
-#     MRID = all_istaging_data.MRID.unique()
-    
 
-#     ### Train, Validation, Test creation 
-#     test_MRID = MRID
-
-#     test_df  = all_istaging_data[all_istaging_data.MRID.isin(test_MRID)]
-
-#     ### ICV correction: divied by ICV, multiply by "MEAN of TRAIN ICV"
-#     col_name = train_df.filter(regex='^MUSE_(?:20[0-7]|1\d\d|[1-9]\d|[4-9])$').columns
-#     icv_mean_train = np.mean(train_df['DLICV'])
-
-#     test_df[col_name]  = test_df.filter(regex='^MUSE_(?:20[0-7]|1\d\d|[1-9]\d|[4-9])$').div(test_df['DLICV'], axis = 0).mul(icv_mean_train, axis = 0)
-
-#     ### Standarize data 
-#     test_df_X  = test_df.drop(columns =  ['MRID','Study','train_test','r1','r2','r3','r4','r5']).reset_index(drop = True)
-
-
-#     y_test = np.array(test_df[['r1','r2','r3','r4','r5']].reset_index(drop = True))
-
-#     scaler = StandardScaler().fit(train_df_X)
-
-#     X_test  = scaler.transform(test_df_X)
-
-#     ### create dataloader for deep learning 
-#     test_loader  = get_surreal_GAN_loader(X_test , y_test,  batch_size = 32, shuffle = False)
-
-#     ### define model, loss and optimizer 
-#     model = TabularTransformer(148, 32, 4, 4, 5).to(device)
-#     optimizer = optim.Adam(model.parameters(), lr = 3e-4, weight_decay = 5e-7)
-
-    
-#     ### testing 
-#     test_result, output_result = infer_tabular_transformer( model = model,
-#                                                             test_loader = test_loader, 
-#                                                             model_dic_path = model_dic_path, 
-#                                                             folder = i,
-#                                                             device = device)
-
-#     test_df[['R1','R2','R3','R4','R5']] = output_result
-#     test_df[['MRID','r1','r2','r3','r4','r5','R1','R2','R3','R4','R5']].to_csv(f'{model_dic_path}/transformer_Regressor_folder_{i}.csv', index = False)
-    
-#     transformer_result.append(test_result)
-    
-#     return transformer_result
 
 if __name__ == "__main__":
     
@@ -193,4 +163,3 @@ if __name__ == "__main__":
     ### get results
     transformer_final = np.mean(transformer_result)
     print(f'transformer Result: {transformer_result}, Average: {transformer_final}')
-

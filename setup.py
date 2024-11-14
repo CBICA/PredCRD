@@ -22,7 +22,7 @@ setup(
     maintainer_email="kyunglok.baik@pennmedicine.upenn.edu",
     download_url="https://github.com/CBICA/PredCRD/",
     url="https://github.com/CBICA/PredCRD/",
-    packages=find_packages(exclude=["tests", ".github","tabular_data"]),
+    packages=find_packages(exclude=["tests", ".github","tabular_data", "roi_model", "notebook", "log"]),
     python_requires=">=3.8",
     install_requires=required,
     entry_points={"console_scripts": ["PredCRD = PredCRD.__main__:main"]},
@@ -38,12 +38,11 @@ setup(
     license="By installing/using PredCRD, the user agrees to the following license: See https://www.med.upenn.edu/cbica/software-agreement-non-commercial.html",
     keywords=[
         "deep learning",
-        "image segmentation",
+        "knowledge transfer",
+        "disease heterogeneity",
         "semantic segmentation",
         "medical image analysis",
         "medical image segmentation",
-        "nnU-Net",
-        "nnunet",
     ],
     package_data={"PredCRD": ["VERSION"]},
 )

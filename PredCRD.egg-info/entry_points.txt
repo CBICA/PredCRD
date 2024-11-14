@@ -1,0 +1,2 @@
+[console_scripts]
+PredCRD = PredCRD.__main__:main

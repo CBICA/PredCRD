@@ -1,0 +1,9 @@
+scipy>=1.10.0
+scikit-learn>=1.2.2
+torch>=2.2.1
+pandas
+numpy
+setuptools
+argparse
+pathlib
+huggingface_hub

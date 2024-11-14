@@ -11,11 +11,23 @@ from sklearn.preprocessing import StandardScaler
 
 ### data loader 
 def get_surreal_GAN_loader(X, y, batch_size = 32, shuffle = True):    
+    print("\nX shape:", X.shape, "\n")
+    print("\ny shape:", y.shape, "\n")
+
     X_tensor = torch.tensor(X.astype(np.float32))
     y_tensor = torch.tensor(y.astype(np.float32))
-
+    
     dataset = TensorDataset(X_tensor, y_tensor)
     loader = DataLoader(dataset, batch_size = batch_size, shuffle = shuffle)
+    
+    return loader
+
+def get_surreal_GAN_loader_inference(X, batch_size = 32):    
+    X_tensor = torch.tensor(X.astype(np.float32))
+    y_tensor = torch.tensor(np.ones((X.shape[0], 5), dtype=np.float32))
+
+    dataset = TensorDataset(X_tensor, y_tensor)
+    loader = DataLoader(dataset, batch_size = batch_size, shuffle = False)
     
     return loader
 
@@ -95,11 +107,11 @@ def train_tabular_transformer(num_epochs,
             
     return model, average_train_loss, average_val_loss
 
-def infer_tabular_transformer(model,
-                              test_loader, 
-                              model_dic_path, 
-                              folder,
-                              device):
+def test_tabular_transformer(model,
+                             test_loader, 
+                             model_dic_path, 
+                             folder,
+                             device):
     
     '''
         input: 
@@ -141,6 +153,44 @@ def infer_tabular_transformer(model,
     
     return result, torch.concat(output_result,axis = 0).detach().cpu().numpy()
 
+def inference(model,
+              test_loader, 
+              model_dic_path, 
+              folder,
+              device):
+    
+    '''
+        input: 
+            model: initialize a TabularTransformer to load the weight
+            test_loader: inference (X only) data loader for test dataset
+            model_dic_path: path to store your model
+            folder: 0,1,2,3,4 for 5 fold cross-validation
+            device: cpu or cuda
+        output:
+            test_result_MAE, all_test_result in shape (number_of_test_data, 5)
+    
+    '''
+    checkpoint = torch.load(f'{model_dic_path}/ROI_Transformer_best_{folder}.pth')
+    model.load_state_dict(checkpoint['model_state_dict'])
+
+    model.eval()
+    output_result = []
+    
+    with torch.no_grad():
+        for inputs, targets in test_loader:
+            inputs, targets = inputs.to(device), targets.to(device)
+            outputs = model(inputs)
+
+            output_result.append(outputs)
+            # loss = loss_fn(outputs, targets)
+
+            # test_loss += loss.item()
+            # test_step += inputs.shape[0]
+                
+        # result = test_loss / test_step
+        # print(f'average test loss : {result}')
+    
+    return torch.concat(output_result,axis = 0).detach().cpu().numpy()
 
 ### TabularTransformer - built for knowledge distillation approach
 class TabularTransformer(nn.Module):
