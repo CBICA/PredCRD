@@ -1,5 +1,6 @@
 import warnings
 import argparse
+import time
 
 import numpy as np 
 import pandas as pd
@@ -120,6 +121,7 @@ def main() -> None:
 
     ## Inference
     print("Initiating the inference.")
+    starttime = time.time()
 
     # Read the input csv into a dataframe
     test_df = pd.read_csv(args.i)
@@ -150,6 +152,7 @@ def main() -> None:
                                  model_dic_path = args.m,
                                  device = device)
     
+    print("Time taken: ", time.time() - starttime)
     test_df[['R1','R2','R3','R4','R5']] = inference_result
     # # Save results only
     # test_df[['MRID','R1','R2','R3','R4','R5']].to_csv(args.o, index = False)
