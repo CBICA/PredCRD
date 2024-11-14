@@ -23,7 +23,7 @@ Requires-Dist: scipy>=1.10.0
 Requires-Dist: scikit-learn>=1.2.2
 Requires-Dist: torch>=2.2.1
 Requires-Dist: pandas
-Requires-Dist: numpy
+Requires-Dist: numpy>=1.24
 Requires-Dist: setuptools
 Requires-Dist: argparse
 Requires-Dist: pathlib

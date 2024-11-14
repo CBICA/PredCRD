@@ -82,7 +82,7 @@ def run_tabular_transformer_pipeline(model_dic_path='../roi_model',
         
         #### Fit & Save the StandardScaler
         scaler = StandardScaler().fit(train_df_X)
-        joblib.dump(scaler, f'{model_dic_path}/scaler_{i}.joblib') # Save the Scaler
+        joblib.dump(scaler, f'{model_dic_path}/scaler_{i}.pkl') # Save the Scaler
 
         X_train = scaler.transform(train_df_X)
         X_val   = scaler.transform(val_df_X)
@@ -129,7 +129,7 @@ def run_tabular_transformer_pipeline(model_dic_path='../roi_model',
         print("Initiating the inference for fold #%d" % i)
 
         ##### Use the saved StandardScalar
-        sc=joblib.load(f'{model_dic_path}/scaler_{i}.joblib') # Load the Scaler
+        sc=joblib.load(f'{model_dic_path}/scaler_{i}.pkl') # Load the Scaler
         X_inference  = sc.transform(test_df_X)
         
         ### load model from checkpoint

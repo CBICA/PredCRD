@@ -94,8 +94,8 @@ def main() -> None:
         "-s",
         type=str,
         required=False,
-        default="../model/scaler_0.bin",
-        help="[Optional] StandardScalar weight path. model/scaler_0.bin by default.",
+        default="../model/scaler_0.pkl",
+        help="[Optional] StandardScalar weight path. model/scaler_0.pkl by default.",
     )
     parser.add_argument(
         "-mt",
@@ -121,17 +121,24 @@ def main() -> None:
     ## Inference
     print("Initiating the inference.")
 
+    # Read the input csv into a dataframe
     test_df = pd.read_csv(args.i)
+    # Encode sex to 0 and 1
+    test_df['Sex'] = test_df['Sex'].apply(lambda x: 0 if x == 'M' else 1)
+    # Load the mean ICV volume used for training of the model
     icv_mean_train = np.load(args.mt)[0]
-
+    # Fetch column names containing MUSE_X
     col_name = test_df.filter(regex='^MUSE_(?:20[0-7]|1\d\d|[1-9]\d|[4-9])$').columns
+    # ICV correction for column names containing MUSE_X
     test_df[col_name] = test_df.filter(regex='^MUSE_(?:20[0-7]|1\d\d|[1-9]\d|[4-9])$').div(test_df['DLICV'], axis = 0).mul(icv_mean_train, axis = 0)
-    
-    # test_df_X  = test_df.drop(columns =  ['MRID','Study','train_test','r1','r2','r3','r4','r5']).reset_index(drop = True)
+    # Drop MRID for test_df_X
+    test_df_X  = test_df.drop(columns=['MRID']).reset_index(drop = True) # include Age and Sex
 
-    ##### Use the saved StandardScalar
-    sc=load(args.s) # Load the Scaler
-    X_inference  = sc.transform(test_df[col_name])
+    # Use the saved StandardScalar
+    ## Load the saved Scaler
+    sc=load(args.s) 
+    ## Scale using the scaler
+    X_inference  = sc.transform(test_df_X) 
     
     ### load model from checkpoint
     model_loaded = TabularTransformer(148, 32, 4, 4, 5).to(device)
@@ -144,7 +151,11 @@ def main() -> None:
                                  device = device)
     
     test_df[['R1','R2','R3','R4','R5']] = inference_result
-    test_df[['MRID','R1','R2','R3','R4','R5']].to_csv(args.o, index = False)
+    # # Save results only
+    # test_df[['MRID','R1','R2','R3','R4','R5']].to_csv(args.o, index = False)
+    
+    # Save all 
+    test_df.to_csv(args.o, index = False)
 
 if __name__ == "__main__":
     main()
