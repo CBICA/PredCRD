@@ -170,7 +170,11 @@ def inference(model,
             test_result_MAE, all_test_result in shape (number_of_test_data, 5)
     
     '''
-    checkpoint = torch.load(f'{model_dic_path}/ROI_Transformer_best_{folder}.pth')
+    if device=='cuda':
+        checkpoint = torch.load(f'{model_dic_path}/ROI_Transformer_best_{folder}.pth')
+    elif device=='cpu':
+        checkpoint = torch.load(f'{model_dic_path}/ROI_Transformer_best_{folder}.pth', map_location=torch.device('cpu'))
+    
     model.load_state_dict(checkpoint['model_state_dict'])
 
     model.eval()

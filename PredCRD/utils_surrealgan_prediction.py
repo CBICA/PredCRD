@@ -169,10 +169,14 @@ def inference(model,
             test_result_MAE, all_test_result in shape (number_of_test_data, 5)
     
     '''
-    checkpoint = torch.load(model_dic_path)
-    model.load_state_dict(checkpoint['model_state_dict'])
+    if device=='cuda':
+        checkpoint = torch.load(model_dic_path)
+    elif device=='cpu':
+        checkpoint = torch.load(model_dic_path, map_location=torch.device('cpu'))
 
+    model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
+    
     output_result = []
     
     with torch.no_grad():
