@@ -152,13 +152,13 @@ def main() -> None:
                                  model_dic_path = args.m,
                                  device = device)
     
-    print("Time taken: ", time.time() - starttime)
+    print("Time taken: ", str(time.time() - starttime))
     test_df[['R1','R2','R3','R4','R5']] = inference_result
     # # Save results only
-    # test_df[['MRID','R1','R2','R3','R4','R5']].to_csv(args.o, index = False)
+    test_df[['MRID','R1','R2','R3','R4','R5']].to_csv(args.o, index = False)
     
     # Save all 
-    test_df.to_csv(args.o, index = False)
+    # test_df.to_csv(args.o, index = False)
 
 if __name__ == "__main__":
     main()
