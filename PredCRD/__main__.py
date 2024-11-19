@@ -1,6 +1,8 @@
 import warnings
 import argparse
 import time
+import os
+from pathlib import Path
 
 import numpy as np 
 import pandas as pd
@@ -57,9 +59,10 @@ def main() -> None:
         EXAMPLE USAGE:
             PredCRD  -i           /path/to/input.csv
                      -o           /path/to/output.csv
-                     -d           *Optional cuda/cpu
+                     -d           *Optional cuda|cpu
                      -m           *Optional /path/to/model.pth
-                     -s           *Optional /path/to/scalar.bin
+                     -s           *Optional /path/to/scalar.pkl
+                     -mt          *Optional /path/to/icv_mean.npy
 
         """.format(VERSION=VERSION),
         add_help=False
@@ -88,22 +91,22 @@ def main() -> None:
         "-m",
         type=str,
         required=False,
-        default="../model/ROI_Transformer_best_0.pth",
-        help="[Optional] Model path. model/ROI_Transformer_best_0.pth by default.",
+        default=os.path.join(Path(__file__).parent.parent,"model/ROI_Transformer_best_2.pth"),
+        help="[Optional] Model path. model/ROI_Transformer_best_2.pth by default.",
     )
     parser.add_argument(
         "-s",
         type=str,
         required=False,
-        default="../model/scaler_0.pkl",
-        help="[Optional] StandardScalar weight path. model/scaler_0.pkl by default.",
+        default=os.path.join(Path(__file__).parent.parent,"model/scaler_2.pkl"),
+        help="[Optional] StandardScalar weight path. model/scaler_2.pkl by default.",
     )
     parser.add_argument(
         "-mt",
         type=str,
         required=False,
-        default="../model/transformer_folder_0_icv_mean_train.npy",
-        help="[Optional] Mean training ICV volume (.npy)"
+        default=os.path.join(Path(__file__).parent.parent,"model/transformer_folder_2_icv_mean_train.npy"),
+        help="[Optional] Mean training ICV volume (.npy). model/transformer_folder_2_icv_mean_train.npy by default."
     )
 
     args = parser.parse_args()
