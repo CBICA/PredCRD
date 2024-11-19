@@ -4,6 +4,8 @@
 *.log
 original_req.txt
 submit-transformer-test.sh
+utils.py
+surrealGAN_tabular_inference.py
 roi_model/
 notebook/
 test/
