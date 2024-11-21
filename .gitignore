@@ -1,4 +1,3 @@
-*.csv
 *.xlsx
 *.ipynb
 *.log
@@ -8,6 +7,5 @@ utils.py
 PredCRD/surrealGAN_tabular_inference.py
 roi_model/
 notebook/
-test/
 log/
 PredCRD.egg-info/
