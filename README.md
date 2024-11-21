@@ -6,6 +6,13 @@ The pipeline aims to combine knowledge distillation (KD) methods for disease sub
 
 ## Supported Pipelines
 
+## Installation
+```
+git clone https://github.com/CBICA/PredCRD.git
+cd PredCRD/
+pip install -e .
+```
+
 #### DLMUSE ROI volumes to SurrealGAN R-indices pipeline:
 ```
 EXAMPLE USAGE:
